@@ -1,0 +1,8 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5111:5111"
+    environment:
+      AJOBOOK_SECRET_KEY: ${AJOBOOK_SECRET_KEY:-local-dev-secret}
+      AJOBOOK_SEED_DEMO: ${AJOBOOK_SEED_DEMO:-1}

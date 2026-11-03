@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Payments · {{ group.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>All payments</h1>
+  <p><a href="/groups/{{ group.id }}">{{ group.name }}</a></p>
+</div>
+<section class="card">
+  <p class="muted" data-testid="ledger-total">{{ ledger.total }} payment{{ "" if ledger.total == 1 else "s" }} recorded</p>
+  <table data-testid="ledger">
+    <thead><tr><th>Paid on</th><th>Member</th><th>Month</th><th class="num">Amount</th><th class="num">Late fee</th><th>Note</th></tr></thead>
+    <tbody>
+      {% for p in ledger.payments %}
+      <tr data-payment-id="{{ p.id }}">
+        <td>{{ p.paid_on|longdate }}</td>
+        <td><a href="/members/{{ p.member.id }}">{{ p.member.full_name }}</a></td>
+        <td>{{ p.cycle }}</td>
+        <td class="num">{{ p.amount_kobo|naira }}</td>
+        <td class="num">{{ p.late_fee_kobo|naira }}</td>
+        <td>{{ p.note }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">No payments yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <nav class="pager" aria-label="Pages">
+    {% if ledger.page > 1 %}<a href="?page={{ ledger.page - 1 }}" rel="prev">Previous</a>{% endif %}
+    <span>Page {{ ledger.page }} of {{ ledger.pages }}</span>
+    {% if ledger.page < ledger.pages %}<a href="?page={{ ledger.page + 1 }}" rel="next">Next</a>{% endif %}
+  </nav>
+</section>
+{% endblock %}

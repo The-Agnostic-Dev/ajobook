@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_macros.html" import state_badge %}
+{% block title %}Payout day · {{ group.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Payout day</h1>
+  <p><a href="/groups/{{ group.id }}">{{ group.name }}</a></p>
+</div>
+<form method="get" class="row">
+  <label>Month
+    <select name="cycle" onchange="this.form.submit()">
+      {% for c in cycles %}
+      <option value="{{ c.number }}"{% if c.number == day.cycle.number %} selected{% endif %}>{{ c.number }}. {{ c.due_date|monthlabel }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <noscript><button>Show</button></noscript>
+</form>
+
+<section class="card" data-testid="payout-summary">
+  <h2>{{ day.cycle.recipient.full_name if day.cycle.recipient else "Nobody" }} collects for {{ day.cycle.due_date|monthlabel }}</h2>
+  <dl class="facts wide">
+    <dt>Contributions due on</dt><dd class="due">{{ day.cycle.due_date|longdate }}</dd>
+    <dt>Expected pot</dt><dd class="expected">{{ day.expected_kobo|naira }}</dd>
+    <dt>Collected</dt><dd class="collected">{{ day.collected_kobo|naira }}</dd>
+    <dt>Still outstanding</dt><dd class="outstanding">{{ day.outstanding_kobo|naira }}</dd>
+    <dt>Amount to hand over</dt><dd class="handover"><strong>{{ day.collected_kobo|naira }}</strong></dd>
+    <dt>Late fees (group purse)</dt><dd class="late-fees">{{ day.late_fees_kobo|naira }}</dd>
+  </dl>
+  <p class="hint">The amount to hand over is what members have contributed for this month. Late fees stay in the group purse and are not part of the payout.</p>
+</section>
+
+<section class="card">
+  <h2>Contributions for this month</h2>
+  <table data-testid="payout-lines">
+    <thead><tr><th>Member</th><th class="num">Paid</th><th class="num">Late fee</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for line in day.lines %}
+      <tr>
+        <td><a href="/members/{{ line.member.id }}">{{ line.member.full_name }}</a></td>
+        <td class="num">{{ line.paid_kobo|naira }}</td>
+        <td class="num">{{ line.late_fee_kobo|naira }}</td>
+        <td>{{ state_badge(line.state) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

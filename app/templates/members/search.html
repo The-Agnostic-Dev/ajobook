@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Find a member{% endblock %}
+{% block content %}
+<h1>Find a member</h1>
+<form method="get" class="row">
+  <input name="q" value="{{ q }}" placeholder="Name, trade or phone number" aria-label="Search members">
+  <button>Search</button>
+</form>
+<section class="card">
+  <table data-testid="search-results">
+    <thead><tr><th>Member</th><th>Group</th><th>Phone</th><th>Position</th></tr></thead>
+    <tbody>
+      {% for m in results %}
+      <tr>
+        <td><a href="/members/{{ m.id }}">{{ m.full_name }}</a></td>
+        <td><a href="/groups/{{ m.group.id }}">{{ m.group.name }}</a></td>
+        <td>{{ m.phone }}</td>
+        <td>{{ m.payout_position }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="muted">Nobody matches “{{ q }}”.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

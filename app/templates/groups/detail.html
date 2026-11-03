@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "_macros.html" import member_fields %}
+{% block title %}{{ group.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ group.name }}</h1>
+  <p class="actions">
+    <a href="/groups/{{ group.id }}/payout">Payout day</a>
+    <a href="/groups/{{ group.id }}/schedule">Schedule</a>
+    <a href="/groups/{{ group.id }}/payments">All payments</a>
+    <a href="/groups/{{ group.id }}/edit">Settings</a>
+  </p>
+</div>
+
+<section class="card">
+  <dl class="facts wide" data-testid="group-facts">
+    <dt>Monthly contribution</dt><dd class="contribution">{{ group.contribution_kobo|naira }}</dd>
+    <dt>Pot each month</dt><dd class="pot">{{ group.pot_kobo|naira }}</dd>
+    <dt>Due</dt><dd class="due-day">{% if group.due_day == 31 %}Last day of the month{% else %}Day {{ group.due_day }} of the month{% endif %}</dd>
+    <dt>Grace period</dt><dd>{{ group.grace_days }} day{{ "" if group.grace_days == 1 else "s" }}</dd>
+    <dt>Late fee</dt><dd>{{ group.late_fee_kobo|naira }}</dd>
+    <dt>Status</dt><dd>{{ status }}{% if current %}, month {{ current.number }} of {{ group.members|length }}{% endif %}</dd>
+    {% if group.meeting_place %}<dt>Meets at</dt><dd>{{ group.meeting_place }}</dd>{% endif %}
+  </dl>
+</section>
+
+<section class="card">
+  <h2>Payout rotation</h2>
+  <table data-testid="rotation">
+    <thead><tr><th>Position</th><th>Member</th><th>Phone</th><th>Collects in</th></tr></thead>
+    <tbody>
+      {% for member, cycle in rotation %}
+      <tr data-member-id="{{ member.id }}"{% if current and cycle and cycle.number == current.number %} class="highlight"{% endif %}>
+        <td class="position">{{ loop.index0 }}</td>
+        <td><a href="/members/{{ member.id }}">{{ member.full_name }}</a></td>
+        <td>{{ member.phone }}</td>
+        <td class="month">{{ cycle.due_date|monthlabel if cycle else "" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2>Member balances</h2>
+  <p class="hint">Click a column heading to sort. Arrears are contributions already due and not yet paid.</p>
+  <table class="sortable" data-testid="balances">
+    <thead>
+      <tr><th>Member</th><th class="num">Paid to date</th><th class="num">Arrears</th><th class="num">Late fees</th></tr>
+    </thead>
+    <tbody>
+      {% for row in balances %}
+      <tr>
+        <td><a href="/members/{{ row.member.id }}">{{ row.member.full_name }}</a></td>
+        <td class="num" data-sort="{{ row.paid_kobo }}">{{ row.paid_kobo|naira }}</td>
+        <td class="num" data-sort="{{ row.arrears_kobo }}">{{ row.arrears_kobo|naira }}</td>
+        <td class="num" data-sort="{{ row.late_fees_kobo }}">{{ row.late_fees_kobo|naira }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card narrow" id="add-member">
+  <h2>Add a member</h2>
+  <p class="hint">New members join at the end of the rotation.</p>
+  <form method="post" action="/groups/{{ group.id }}/members" class="stack" data-testid="add-member">
+    {{ member_fields(member_form, member_errors) }}
+    <button class="primary">Add member</button>
+  </form>
+</section>
+{% endblock %}

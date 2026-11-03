@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field_error %}
+{% block title %}{{ "Edit " ~ group.name if group else "New group" }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ "Group settings" if group else "New ajo group" }}</h1>
+  <form method="post" class="stack" data-testid="group-form">
+    <label>Group name
+      <input name="name" value="{{ form.name }}" required maxlength="120">
+      {{ field_error(errors, 'name') }}
+    </label>
+    <label>Monthly contribution per member (₦)
+      <input name="contribution" value="{{ form.contribution }}" inputmode="decimal" required placeholder="20,000">
+      {{ field_error(errors, 'contribution') }}
+    </label>
+    <label>First contribution month
+      <input name="start_month" type="month" value="{{ form.start_month }}" required>
+      {{ field_error(errors, 'start_month') }}
+    </label>
+    <label>Contribution due on
+      <select name="due_day">
+        {% for day, label in due_days %}
+        <option value="{{ day }}"{% if day == form.due_day %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {{ field_error(errors, 'due_day') }}
+    </label>
+    <label>Grace days before a late fee
+      <input name="grace_days" type="number" min="0" max="14" value="{{ form.grace_days }}">
+      {{ field_error(errors, 'grace_days') }}
+    </label>
+    <label>Late fee (₦)
+      <input name="late_fee" value="{{ form.late_fee }}" inputmode="decimal">
+      {{ field_error(errors, 'late_fee') }}
+    </label>
+    <label>Where the group meets <small>(optional)</small>
+      <input name="meeting_place" value="{{ form.meeting_place }}" maxlength="160">
+    </label>
+    <p class="hint">Late fees are kept in the group purse. They are not added to anybody's payout.</p>
+    <div class="row">
+      <button class="primary">{{ "Save settings" if group else "Create group" }}</button>
+      <a href="{{ '/groups/%d' % group.id if group else '/' }}">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

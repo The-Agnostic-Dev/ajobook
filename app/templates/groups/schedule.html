@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Schedule · {{ group.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Contribution schedule</h1>
+  <p><a href="/groups/{{ group.id }}">{{ group.name }}</a></p>
+</div>
+<section class="card">
+  <p class="hint">Everybody pays {{ group.contribution_kobo|naira }} by the due date. A late fee of {{ group.late_fee_kobo|naira }} applies to payments made more than {{ group.grace_days }} day{{ "" if group.grace_days == 1 else "s" }} after it.</p>
+  <table data-testid="schedule">
+    <thead><tr><th>Month</th><th>Due date</th><th>Collects</th><th class="num">Pot</th><th></th></tr></thead>
+    <tbody>
+      {% for cycle in cycles %}
+      <tr data-cycle="{{ cycle.number }}"{% if current and current.number == cycle.number %} class="highlight"{% endif %}>
+        <td>{{ cycle.number }}. {{ cycle.due_date|monthlabel }}</td>
+        <td class="due">{{ cycle.due_date|longdate }}</td>
+        <td>{{ cycle.recipient.full_name if cycle.recipient else "Not assigned" }}</td>
+        <td class="num">{{ group.pot_kobo|naira }}</td>
+        <td><a href="/groups/{{ group.id }}/payout?cycle={{ cycle.number }}">Payout day</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

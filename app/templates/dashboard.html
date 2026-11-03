@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Your groups</h1>
+<div class="cards" data-testid="group-cards">
+  {% for card in cards %}
+  <article class="card group-card" data-group-id="{{ card.group_id }}">
+    <h2><a href="/groups/{{ card.group_id }}">{{ card.name }}</a></h2>
+    <dl class="facts">
+      <dt>Members</dt><dd class="members">{{ card.member_count }}</dd>
+      <dt>Monthly contribution</dt><dd class="contribution">{{ card.contribution_kobo|naira }}</dd>
+      <dt>Pot each month</dt><dd class="pot">{{ card.pot_kobo|naira }}</dd>
+      {% if card.cycle_number %}
+      <dt>This month</dt><dd>Month {{ card.cycle_number }} of {{ card.cycle_total }}</dd>
+      <dt>Collecting this month</dt><dd class="collector">{{ card.collector or "Not assigned" }}</dd>
+      <dt>Collected so far</dt><dd class="collected">{{ card.collected_kobo|naira }}</dd>
+      {% else %}
+      <dt>Status</dt><dd>{{ card.status }}</dd>
+      {% endif %}
+    </dl>
+    <p class="actions">
+      <a href="/groups/{{ card.group_id }}/payout">Payout day</a>
+      <a href="/groups/{{ card.group_id }}/schedule">Schedule</a>
+    </p>
+  </article>
+  {% else %}
+  <p>No groups yet. <a href="/groups/new">Create your first group</a>.</p>
+  {% endfor %}
+</div>
+
+<section class="card">
+  <h2>Recent payments</h2>
+  <table data-testid="recent-payments">
+    <thead><tr><th>Paid on</th><th>Member</th><th>Group</th><th>Month</th><th class="num">Amount</th></tr></thead>
+    <tbody>
+      {% for p in recent %}
+      <tr>
+        <td>{{ p.paid_on|longdate }}</td>
+        <td><a href="/members/{{ p.member.id }}">{{ p.member.full_name }}</a></td>
+        <td>{{ p.member.group.name }}</td>
+        <td>{{ p.cycle }}</td>
+        <td class="num">{{ p.amount_kobo|naira }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">No payments recorded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

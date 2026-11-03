@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_macros.html" import member_fields, field_error %}
+{% block title %}Edit {{ member.full_name }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Edit member</h1>
+  <p class="muted">{{ member.group.name }}, position {{ member.payout_position }} in the rotation.</p>
+  <form method="post" class="stack">
+    {{ member_fields(form, errors) }}
+    <div class="row">
+      <button class="primary">Save</button>
+      <a href="/members/{{ member.id }}">Cancel</a>
+    </div>
+  </form>
+</section>
+<section class="card narrow">
+  <h2>Remove from group</h2>
+  <p class="hint">Only members with no payments can be removed. Everyone after them moves up one place in the rotation.</p>
+  {{ field_error(errors, 'member') }}
+  <form method="post" action="/members/{{ member.id }}/remove" data-confirm="Remove {{ member.full_name }} from {{ member.group.name }}?">
+    <button class="danger">Remove member</button>
+  </form>
+</section>
+{% endblock %}

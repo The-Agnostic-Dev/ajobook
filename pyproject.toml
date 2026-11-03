@@ -1,0 +1,10 @@
+[project]
+name = "ajobook"
+version = "0.6.0"
+description = "Rotating savings group (ajo / esusu) tracker for group coordinators"
+requires-python = ">=3.13"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "_macros.html" import state_badge %}
+{% block title %}{{ member.full_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ member.full_name }}</h1>
+  <p class="actions no-print">
+    <a href="/groups/{{ group.id }}">{{ group.name }}</a>
+    <a href="/members/{{ member.id }}/edit">Edit member</a>
+    <button type="button" class="link" onclick="window.print()">Print statement</button>
+  </p>
+</div>
+
+<section class="card">
+  <dl class="facts wide" data-testid="member-facts">
+    <dt>Group</dt><dd>{{ group.name }}</dd>
+    <dt>Phone</dt><dd>{{ member.phone }}</dd>
+    {% if member.trade %}<dt>Trade / work</dt><dd>{{ member.trade }}</dd>{% endif %}
+    <dt>Payout turn</dt>
+    <dd class="payout-turn">Position {{ member.payout_position }}{% if statement.payout_cycle %}, collects in {{ statement.payout_cycle.due_date|monthlabel }}{% endif %}</dd>
+    <dt>Paid to date</dt><dd class="total-paid">{{ statement.total_paid_kobo|naira }}</dd>
+    <dt>Arrears</dt><dd class="arrears">{{ statement.arrears_kobo|naira }}</dd>
+    <dt>Late fees</dt><dd class="late-fees">{{ statement.total_late_fees_kobo|naira }}</dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>Statement</h2>
+  <table data-testid="statement">
+    <thead><tr><th>Month</th><th>Due date</th><th class="num">Expected</th><th class="num">Paid</th><th class="num">Late fee</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for line in statement.lines %}
+      <tr data-cycle="{{ line.cycle.number }}">
+        <td>{{ line.cycle.number }}. {{ line.cycle.due_date|monthlabel }}</td>
+        <td class="due">{{ line.cycle.due_date|longdate }}</td>
+        <td class="num">{{ line.expected_kobo|naira }}</td>
+        <td class="num paid">{{ line.paid_kobo|naira }}</td>
+        <td class="num late-fee">{{ line.late_fee_kobo|naira }}</td>
+        <td>{{ state_badge(line.state) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card narrow no-print" id="record-payment">
+  <h2>Record a payment</h2>
+  {% if payment_error %}<p class="flash error">{{ payment_error }}</p>{% endif %}
+  <form method="post" action="/members/{{ member.id }}/payments" class="stack" data-testid="payment-form">
+    <input type="hidden" name="form_token" value="{{ form_token }}">
+    <label>For month
+      <select name="cycle">
+        {% for c in cycles %}
+        <option value="{{ c.number }}"{% if c.number|string == payment_form.cycle %} selected{% endif %}>{{ c.number }}. {{ c.due_date|monthlabel }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Amount (₦)
+      <input name="amount" inputmode="decimal" required value="{{ payment_form.amount or (group.contribution_kobo|naira_input) }}">
+    </label>
+    <label>Date paid
+      <input name="paid_on" type="date" required value="{{ payment_form.paid_on or today.isoformat() }}" max="{{ today.isoformat() }}">
+    </label>
+    <label>Note <small>(optional)</small>
+      <input name="note" value="{{ payment_form.note }}" maxlength="200" placeholder="e.g. Transfer from GTBank">
+    </label>
+    <button class="primary">Record payment</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Payments</h2>
+  <table data-testid="payments">
+    <thead><tr><th>Paid on</th><th>Month</th><th class="num">Amount</th><th class="num">Late fee</th><th>Note</th><th class="no-print"></th></tr></thead>
+    <tbody>
+      {% for p in statement.payments %}
+      <tr data-payment-id="{{ p.id }}">
+        <td>{{ p.paid_on|longdate }}</td>
+        <td>{{ p.cycle }}</td>
+        <td class="num">{{ p.amount_kobo|naira }}</td>
+        <td class="num">{{ p.late_fee_kobo|naira }}</td>
+        <td class="note">{{ p.note }}</td>
+        <td class="no-print">
+          <form method="post" action="/payments/{{ p.id }}/delete" data-confirm="Remove this payment of {{ p.amount_kobo|naira }}?">
+            <button type="button" class="link danger">Remove</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">No payments yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

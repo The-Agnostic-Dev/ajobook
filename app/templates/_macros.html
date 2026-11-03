@@ -1,0 +1,23 @@
+{% macro field_error(errors, name) -%}
+  {% if errors and errors.get(name) %}<span class="error">{{ errors[name] }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro member_fields(form, errors) -%}
+  <label>Full name
+    <input name="full_name" value="{{ form.full_name }}" required maxlength="120">
+    {{ field_error(errors, 'full_name') }}
+  </label>
+  <label>Phone
+    <input name="phone" value="{{ form.phone }}" required inputmode="tel"
+           pattern="0[789][01][0-9]{7}" title="Nigerian mobile number, e.g. 08031234567"
+           placeholder="08031234567">
+    {{ field_error(errors, 'phone') }}
+  </label>
+  <label>Trade / work <small>(optional)</small>
+    <input name="trade" value="{{ form.trade }}" maxlength="80" placeholder="e.g. Fabric seller, Civil servant">
+  </label>
+{%- endmacro %}
+
+{% macro state_badge(state) -%}
+  <span class="badge {{ state|lower|replace(' ', '-') }}">{{ state }}</span>
+{%- endmacro %}
