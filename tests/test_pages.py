@@ -75,7 +75,7 @@ def test_payout_rotation_positions_start_at_one(logged_in):
 
     page = logged_in.get("/groups/1").text
     table = page.split("Payout rotation", 1)[1].split("</table>", 1)[0]
-    positions = [int(n) for n in re.findall(r"<td[^>]*>\s*(\d+)\s*</td>", table)]
+    positions = [int(n) for n in re.findall(r'<td class="position">\s*(\d+)\s*</td>', table)]
     assert positions == list(range(1, 11))
 
     member_ids = re.findall(r'href="/members/(\d+)"', table)
