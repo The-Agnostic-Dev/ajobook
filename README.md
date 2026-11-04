@@ -76,6 +76,8 @@ Dates are relative to today, so the groups are always mid-cycle.
 .venv/bin/pytest
 ```
 
+See [QA.md](QA.md) for the full QA workflow: setup, automated suite, and the manual checklist with expected results.
+
 ## Project layout
 
 ```
