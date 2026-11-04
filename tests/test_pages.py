@@ -1,3 +1,6 @@
+import re
+
+
 def test_pages_need_login(client):
     response = client.get("/groups/1", follow_redirects=False)
     assert response.status_code == 303
@@ -64,6 +67,24 @@ def test_record_payment_rejects_bad_amount(logged_in):
 def test_member_search(logged_in):
     response = logged_in.get("/members", params={"q": "kunle"})
     assert "Kunle Adeyemi" in response.text
+
+
+def test_payout_rotation_positions_start_at_one(logged_in):
+    dashboard = logged_in.get("/").text
+    assert "Balogun Market Traders Ajo" in dashboard
+
+    page = logged_in.get("/groups/1").text
+    table = page.split("Payout rotation", 1)[1].split("</table>", 1)[0]
+    positions = [int(n) for n in re.findall(r"<td[^>]*>\s*(\d+)\s*</td>", table)]
+    assert positions == list(range(1, 11))
+
+    member_ids = re.findall(r'href="/members/(\d+)"', table)
+    assert len(member_ids) == 10
+    for position, member_id in enumerate(member_ids, start=1):
+        statement = logged_in.get(f"/members/{member_id}").text
+        turn = re.search(r"Payout turn.*?(\d+)", statement, re.DOTALL)
+        assert turn, member_id
+        assert int(turn.group(1)) == position
 
 
 def test_resending_the_same_form_records_once(logged_in):
