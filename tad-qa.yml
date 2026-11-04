@@ -1,0 +1,36 @@
+# Added by TAD (The Agnostic Dev). Checks TAD's pull requests before
+# TAD reviews them: install, build and tests.
+# Runs on every pull request (opened, synchronize, reopened) for any branch.
+# Optional: add a repository secret TAD_QA_ENV with the .env lines this app needs to build and start.
+name: TAD QA
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+concurrency:
+  group: tad-qa-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  qa:
+    name: TAD QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - name: App settings
+        env:
+          TAD_QA_ENV: ${{ secrets.TAD_QA_ENV }}
+        run: if [ -n "$TAD_QA_ENV" ]; then printf '%s\n' "$TAD_QA_ENV" >> .env; fi
+      - name: Install
+        run: |
+          pip install -r requirements-dev.txt
+          pip install -e . || pip install .
+      - name: Build
+        run: |
+          python -m compileall -q .
+      - name: Test
+        run: |
+          pytest -q
