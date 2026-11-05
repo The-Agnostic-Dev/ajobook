@@ -50,23 +50,23 @@ class Statement:
 
 def _paid_by_cycle(group: Group, payments: list[Payment]) -> tuple[dict[int, int], dict[int, int]]:
     paid: dict[int, int] = defaultdict(int)
-    fees: dict[int, int] = defaultdict(int)
+    fee_totals: dict[int, int] = defaultdict(int)
     for p in payments:
         paid[p.cycle] += p.amount_kobo
-        fees[p.cycle] += fees.late_fee_for(group, p)
-    return paid, fees
+        fee_totals[p.cycle] += fees.late_fee_for(group, p)
+    return paid, fee_totals
 
 
 def member_statement(member: Member, today: date | None = None) -> Statement:
     today = today or lagos_today()
     group = member.group
-    paid, fees = _paid_by_cycle(group, member.payments)
+    paid, fee_totals = _paid_by_cycle(group, member.payments)
     lines = [
         StatementLine(
             cycle=c,
             expected_kobo=group.contribution_kobo,
             paid_kobo=paid[c.number],
-            late_fee_kobo=fees[c.number],
+            late_fee_kobo=fee_totals[c.number],
             is_due=c.due_date <= today,
         )
         for c in schedule.cycles(group)
