@@ -32,7 +32,7 @@
       {% for member, cycle in rotation %}
       <tr data-member-id="{{ member.id }}"{% if current and cycle and cycle.number == current.number %} class="highlight"{% endif %}>
         <td class="position">{{ member.payout_position }}</td>
-        <td class="name"><a href="/members/{{ member.id }}">{{ member.full_name }}</a></td>
+        <td><a href="/members/{{ member.id }}">{{ member.full_name }}</a></td>
         <td>{{ member.phone }}</td>
         <td class="month">{{ cycle.due_date|monthlabel if cycle else "" }}</td>
       </tr>

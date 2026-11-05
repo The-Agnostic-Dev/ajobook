@@ -80,6 +80,7 @@ def test_payout_rotation_numbered_from_one(logged_in):
             self.in_cell = False
             self.current = {}
             self.buffer = ""
+            self.cell_index = 0
 
         def handle_starttag(self, tag, attrs):
             attrs = dict(attrs)
@@ -87,10 +88,11 @@ def test_payout_rotation_numbered_from_one(logged_in):
                 self.in_table = True
             elif self.in_table and tag == "tr":
                 self.current = {}
+                self.cell_index = 0
             elif self.in_table and tag == "td":
                 self.in_cell = True
                 self.buffer = ""
-                self.cell_class = attrs.get("class", "")
+                self.cell_index += 1
 
         def handle_data(self, data):
             if self.in_cell:
@@ -101,9 +103,9 @@ def test_payout_rotation_numbered_from_one(logged_in):
                 self.in_table = False
             elif self.in_table and tag == "td" and self.in_cell:
                 self.in_cell = False
-                if "position" in self.cell_class:
+                if self.cell_index == 1:
                     self.current["position"] = self.buffer.strip()
-                elif "name" in self.cell_class:
+                elif self.cell_index == 2:
                     self.current["name"] = self.buffer.strip()
             elif self.in_table and tag == "tr":
                 if self.current:
