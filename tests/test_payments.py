@@ -4,6 +4,7 @@ import pytest
 
 from app.dates import lagos_today
 from app.services import payments, statements
+from app.models import Payment
 
 
 def _at(day: date) -> datetime:
@@ -76,6 +77,33 @@ def test_payout_day_excludes_late_fees_from_handover(db, make_group):
     assert day.late_fees_kobo == 50_000
     assert day.outstanding_kobo == 0
     assert day.unpaid == []
+
+
+def test_on_time_payment_recorded_later_has_no_late_fee(db, make_group):
+    group = make_group(start=date(2026, 1, 1), due_day=5, grace_days=3)
+    member = group.members[0]
+    p = payments.record_payment(
+        db, member, cycle=1, amount_kobo=1_000_000, paid_on=date(2026, 1, 8), recorded_at=_at(date(2026, 1, 12))
+    )
+    assert p.late_fee_kobo == 0
+
+
+def test_payout_day_ignores_stored_late_fee_for_on_time_payment(db, make_group):
+    group = make_group(members=2, start=date(2026, 1, 1), contribution_kobo=1_000_000, late_fee_kobo=50_000)
+    a, b = group.members
+    db.add(Payment(
+        member=a, cycle=1, amount_kobo=1_000_000, paid_on=date(2026, 1, 8),
+        recorded_at=_at(date(2026, 1, 12)), late_fee_kobo=50_000
+    ))
+    db.commit()
+    payments.record_payment(
+        db, b, cycle=1, amount_kobo=1_000_000, paid_on=date(2026, 1, 8), recorded_at=_at(date(2026, 1, 8))
+    )
+    db.refresh(a)
+    db.refresh(b)
+    day = statements.payout_day(group, statements.schedule.get_cycle(group, 1))
+    assert day.late_fees_kobo == 0
+    assert day.collected_kobo == 2_000_000
 
 
 def test_delete_payment(db, make_group):
