@@ -82,7 +82,7 @@
         <td class="note">{{ p.note }}</td>
         <td class="no-print">
           <form method="post" action="/payments/{{ p.id }}/delete" data-confirm="Remove this payment of {{ p.amount_kobo|naira }}?">
-            <button type="button" class="link danger">Remove</button>
+            <button class="link danger">Remove</button>
           </form>
         </td>
       </tr>
