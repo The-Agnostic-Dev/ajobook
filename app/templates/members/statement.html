@@ -9,7 +9,7 @@
     <a href="/members/{{ member.id }}/edit">Edit member</a>
     {% if not statement.payments %}
     <form method="post" action="/members/{{ member.id }}/remove" data-confirm="Remove {{ member.full_name }} from {{ group.name }}?">
-      <button class="link danger">Remove member</button>
+      <button type="submit" class="link danger">Remove member</button>
     </form>
     {% endif %}
     <button type="button" class="link" onclick="window.print()">Print statement</button>
