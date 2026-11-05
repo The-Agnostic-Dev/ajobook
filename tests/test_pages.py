@@ -122,6 +122,42 @@ def test_payout_rotation_numbered_from_one(logged_in):
     assert names[9] == "Uche Obi"
 
 
+def test_remove_payment_button_submits_delete_form(logged_in):
+    page = logged_in.get("/members/1")
+    assert page.status_code == 200
+
+    forms = []
+
+    class DeleteFormParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.current = None
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            if tag == "form" and re.match(r"/payments/\d+/delete$", attrs.get("action", "")):
+                self.current = {"action": attrs["action"], "button_type": None}
+            elif self.current is not None and tag == "button":
+                self.current["button_type"] = attrs.get("type", "submit")
+
+        def handle_endtag(self, tag):
+            if tag == "form" and self.current is not None:
+                forms.append(self.current)
+                self.current = None
+
+    parser = DeleteFormParser()
+    parser.feed(page.text)
+    assert forms, "statement should show a delete form per payment"
+    for form in forms:
+        assert form["button_type"] == "submit", "Remove button must submit the delete form"
+
+    target = forms[0]["action"]
+    response = logged_in.post(target, follow_redirects=False)
+    assert response.status_code == 303
+    remaining = logged_in.get("/members/1").text
+    assert remaining.count('/delete"') == len(forms) - 1
+
+
 def test_member_search(logged_in):
     response = logged_in.get("/members", params={"q": "kunle"})
     assert "Kunle Adeyemi" in response.text
