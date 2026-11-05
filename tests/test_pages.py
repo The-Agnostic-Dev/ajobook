@@ -1,3 +1,7 @@
+import re
+from html.parser import HTMLParser
+
+
 def test_pages_need_login(client):
     response = client.get("/groups/1", follow_redirects=False)
     assert response.status_code == 303
@@ -59,6 +63,63 @@ def test_record_payment_rejects_bad_amount(logged_in):
     response = logged_in.post("/members/1/payments", data={"cycle": "1", "amount": "abc", "paid_on": "2026-01-01"})
     assert response.status_code == 400
     assert "is not an amount" in response.text
+
+
+def test_payout_rotation_numbered_from_one(logged_in):
+    dashboard = logged_in.get("/").text
+    match = re.search(r'href="(/groups/\d+)"[^>]*>\s*Balogun Market Traders Ajo', dashboard)
+    assert match, "dashboard should link to the Balogun Market group"
+    page = logged_in.get(match.group(1)).text
+
+    rows = []
+
+    class RotationParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.in_table = False
+            self.in_cell = False
+            self.current = {}
+            self.buffer = ""
+            self.cell_index = 0
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            if tag == "table" and attrs.get("data-testid") == "rotation":
+                self.in_table = True
+            elif self.in_table and tag == "tr":
+                self.current = {}
+                self.cell_index = 0
+            elif self.in_table and tag == "td":
+                self.in_cell = True
+                self.buffer = ""
+                self.cell_index += 1
+
+        def handle_data(self, data):
+            if self.in_cell:
+                self.buffer += data
+
+        def handle_endtag(self, tag):
+            if tag == "table" and self.in_table:
+                self.in_table = False
+            elif self.in_table and tag == "td" and self.in_cell:
+                self.in_cell = False
+                if self.cell_index == 1:
+                    self.current["position"] = self.buffer.strip()
+                elif self.cell_index == 2:
+                    self.current["name"] = self.buffer.strip()
+            elif self.in_table and tag == "tr":
+                if self.current:
+                    rows.append(self.current)
+
+    parser = RotationParser()
+    parser.feed(page)
+
+    positions = [row["position"] for row in rows]
+    assert positions == [str(n) for n in range(1, 11)]
+    assert "0" not in positions
+    names = [row["name"] for row in rows]
+    assert names[0] == "Adunni Bakare"
+    assert names[9] == "Uche Obi"
 
 
 def test_member_search(logged_in):
