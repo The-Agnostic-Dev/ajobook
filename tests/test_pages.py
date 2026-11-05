@@ -122,20 +122,32 @@ def test_payout_rotation_numbered_from_one(logged_in):
     assert names[9] == "Uche Obi"
 
 
-def test_remove_payment_button_submits_delete_form(logged_in):
-    page = logged_in.get("/members/1")
-    assert page.status_code == 200
+def test_remove_member_button_removes_member(logged_in):
+    response = logged_in.post(
+        "/groups/1/members",
+        data={"full_name": "Bola Testcase", "phone": "08031234599", "trade": "Tailoring"},
+        follow_redirects=False,
+    )
+    assert response.status_code in (200, 303)
+
+    group_page = logged_in.get("/groups/1").text
+    match = re.search(r'href="/members/(\d+)"[^>]*>\s*Bola Testcase', group_page)
+    assert match, "new member should appear on the group page"
+    member_id = match.group(1)
+
+    statement = logged_in.get(f"/members/{member_id}")
+    assert statement.status_code == 200
 
     forms = []
 
-    class DeleteFormParser(HTMLParser):
+    class RemoveFormParser(HTMLParser):
         def __init__(self):
             super().__init__()
             self.current = None
 
         def handle_starttag(self, tag, attrs):
             attrs = dict(attrs)
-            if tag == "form" and re.match(r"/payments/\d+/delete$", attrs.get("action", "")):
+            if tag == "form" and re.match(r"/members/\d+/remove$", attrs.get("action", "")):
                 self.current = {"action": attrs["action"], "button_type": None}
             elif self.current is not None and tag == "button":
                 self.current["button_type"] = attrs.get("type", "submit")
@@ -145,17 +157,22 @@ def test_remove_payment_button_submits_delete_form(logged_in):
                 forms.append(self.current)
                 self.current = None
 
-    parser = DeleteFormParser()
-    parser.feed(page.text)
-    assert forms, "statement should show a delete form per payment"
-    for form in forms:
-        assert form["button_type"] == "submit", "Remove button must submit the delete form"
+    parser = RemoveFormParser()
+    parser.feed(statement.text)
+    assert forms, "statement should show a remove form for a member with no payments"
+    assert forms[0]["action"] == f"/members/{member_id}/remove"
+    assert forms[0]["button_type"] == "submit", "Remove member button must submit the form"
 
-    target = forms[0]["action"]
-    response = logged_in.post(target, follow_redirects=False)
+    response = logged_in.post(forms[0]["action"], follow_redirects=False)
     assert response.status_code == 303
-    remaining = logged_in.get("/members/1").text
-    assert remaining.count('/delete"') == len(forms) - 1
+
+    group_page = logged_in.get("/groups/1").text
+    assert "Bola Testcase" not in group_page
+
+    dashboard = logged_in.get("/").text
+    card = re.search(r"Balogun Market Traders Ajo.*?(\d+)\s+members", dashboard, re.DOTALL)
+    assert card, "dashboard should show the member count for the Balogun group"
+    assert card.group(1) == "10"
 
 
 def test_member_search(logged_in):

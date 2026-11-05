@@ -7,6 +7,11 @@
   <p class="actions no-print">
     <a href="/groups/{{ group.id }}">{{ group.name }}</a>
     <a href="/members/{{ member.id }}/edit">Edit member</a>
+    {% if not statement.payments %}
+    <form method="post" action="/members/{{ member.id }}/remove" data-confirm="Remove {{ member.full_name }} from {{ group.name }}?">
+      <button class="link danger">Remove member</button>
+    </form>
+    {% endif %}
     <button type="button" class="link" onclick="window.print()">Print statement</button>
   </p>
 </div>
@@ -82,7 +87,7 @@
         <td class="note">{{ p.note }}</td>
         <td class="no-print">
           <form method="post" action="/payments/{{ p.id }}/delete" data-confirm="Remove this payment of {{ p.amount_kobo|naira }}?">
-            <button class="link danger">Remove</button>
+            <button type="button" class="link danger">Remove</button>
           </form>
         </td>
       </tr>
