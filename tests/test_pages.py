@@ -167,7 +167,7 @@ def test_remove_member_button_removes_member(logged_in):
     assert response.status_code == 303
 
     group_page = logged_in.get("/groups/1").text
-    assert "Bola Testcase" not in group_page
+    assert f'href="/members/{member_id}"' not in group_page
 
     dashboard = logged_in.get("/").text
     card = re.search(r"Balogun Market Traders Ajo.*?(\d+)\s+members", dashboard, re.DOTALL)
