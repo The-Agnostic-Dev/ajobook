@@ -4,7 +4,7 @@ from datetime import date
 
 from ..dates import lagos_today
 from ..models import Group, Member, Payment
-from . import schedule
+from . import fees, schedule
 
 
 @dataclass(frozen=True)
@@ -48,19 +48,19 @@ class Statement:
         return sum(line.outstanding_kobo for line in self.lines)
 
 
-def _paid_by_cycle(payments: list[Payment]) -> tuple[dict[int, int], dict[int, int]]:
+def _paid_by_cycle(group: Group, payments: list[Payment]) -> tuple[dict[int, int], dict[int, int]]:
     paid: dict[int, int] = defaultdict(int)
     fees: dict[int, int] = defaultdict(int)
     for p in payments:
         paid[p.cycle] += p.amount_kobo
-        fees[p.cycle] += p.late_fee_kobo
+        fees[p.cycle] += fees.late_fee_for(group, p)
     return paid, fees
 
 
 def member_statement(member: Member, today: date | None = None) -> Statement:
     today = today or lagos_today()
     group = member.group
-    paid, fees = _paid_by_cycle(member.payments)
+    paid, fees = _paid_by_cycle(group, member.payments)
     lines = [
         StatementLine(
             cycle=c,
@@ -141,7 +141,7 @@ def payout_day(group: Group, cycle: schedule.Cycle) -> PayoutDay:
             PayoutLine(
                 member=member,
                 paid_kobo=sum(p.amount_kobo for p in in_cycle),
-                late_fee_kobo=sum(p.late_fee_kobo for p in in_cycle),
+                late_fee_kobo=sum(fees.late_fee_for(group, p) for p in in_cycle),
                 expected_kobo=group.contribution_kobo,
             )
         )

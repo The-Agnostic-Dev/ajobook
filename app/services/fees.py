@@ -9,7 +9,7 @@ def late_fee_for(group: Group, payment: Payment) -> int:
     cycle = schedule.get_cycle(group, payment.cycle)
     if cycle is None:
         return 0
-    paid_on = payment.recorded_at.date()
+    paid_on = payment.paid_on
     if paid_on > schedule.late_after(group, cycle):
         return group.late_fee_kobo
     return 0
