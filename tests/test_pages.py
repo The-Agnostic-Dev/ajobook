@@ -1,6 +1,8 @@
 import re
 from html.parser import HTMLParser
 
+from app.services import summary
+
 
 def test_pages_need_login(client):
     response = client.get("/groups/1", follow_redirects=False)
@@ -120,6 +122,95 @@ def test_payout_rotation_numbered_from_one(logged_in):
     names = [row["name"] for row in rows]
     assert names[0] == "Adunni Bakare"
     assert names[9] == "Uche Obi"
+
+
+def test_remove_member_button_removes_member(logged_in):
+    response = logged_in.post(
+        "/groups/1/members",
+        data={"full_name": "Bola Testcase", "phone": "08031234599", "trade": "Tailoring"},
+        follow_redirects=False,
+    )
+    assert response.status_code in (200, 303)
+
+    group_page = logged_in.get("/groups/1").text
+    match = re.search(r'href="/members/(\d+)"[^>]*>\s*Bola Testcase', group_page)
+    assert match, "new member should appear on the group page"
+    member_id = match.group(1)
+
+    statement = logged_in.get(f"/members/{member_id}")
+    assert statement.status_code == 200
+
+    forms = []
+
+    class RemoveFormParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.current = None
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            if tag == "form" and re.match(r"/members/\d+/remove$", attrs.get("action", "")):
+                self.current = {"action": attrs["action"], "button_type": None}
+            elif self.current is not None and tag == "button":
+                self.current["button_type"] = attrs.get("type", "submit")
+
+        def handle_endtag(self, tag):
+            if tag == "form" and self.current is not None:
+                forms.append(self.current)
+                self.current = None
+
+    parser = RemoveFormParser()
+    parser.feed(statement.text)
+    assert forms, "statement should show a remove form for a member with no payments"
+    assert forms[0]["action"] == f"/members/{member_id}/remove"
+    assert forms[0]["button_type"] == "submit", "Remove member button must submit the form"
+
+    response = logged_in.post(forms[0]["action"], follow_redirects=False)
+    assert response.status_code in (200, 303)
+
+    group_page = logged_in.get("/groups/1").text
+    assert f'href="/members/{member_id}"' not in group_page
+    assert "Bola Testcase removed from the group." in group_page
+
+    group_page = logged_in.get("/groups/1").text
+    assert "Bola Testcase" not in group_page
+
+    search = logged_in.get("/members", params={"q": "Bola"}).text
+    assert "Bola Testcase" not in search
+
+
+def _summary_card(page: str, group_id: int) -> str:
+    marker = f'data-group-id="{group_id}"'
+    start = page.find(marker)
+    assert start != -1, f"dashboard should have a summary card for group {group_id}"
+    end = page.find("data-group-id=", start + len(marker))
+    return page[start:] if end == -1 else page[start:end]
+
+
+def test_remove_member_updates_dashboard_summary(logged_in):
+    summary.clear()
+    response = logged_in.post(
+        "/groups/1/members",
+        data={"full_name": "Bola Summary", "phone": "08031234598", "trade": "Tailoring"},
+        follow_redirects=False,
+    )
+    assert response.status_code in (200, 303)
+
+    group_page = logged_in.get("/groups/1").text
+    match = re.search(r'href="/members/(\d+)"[^>]*>\s*Bola Summary', group_page)
+    assert match, "new member should appear on the group page"
+    member_id = match.group(1)
+
+    card = _summary_card(logged_in.get("/").text, 1)
+    assert '<dd class="members">11</dd>' in card
+    assert "₦220,000.00" in card
+
+    response = logged_in.post(f"/members/{member_id}/remove", follow_redirects=False)
+    assert response.status_code in (200, 303)
+
+    card = _summary_card(logged_in.get("/").text, 1)
+    assert '<dd class="members">10</dd>' in card
+    assert "₦200,000.00" in card
 
 
 def test_member_search(logged_in):

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session, selectinload
 
+from . import summary
 from ..models import Group, Member
 
 PHONE_RE = re.compile(r"^0[789][01]\d{8}$")
@@ -77,6 +78,7 @@ def remove_member(db: Session, member: Member) -> None:
             update(Member).where(Member.id == other.id).values(payout_position=other.payout_position - 1)
         )
     db.commit()
+    summary.invalidate(group_id)
 
 
 def search(db: Session, query: str) -> list[Member]:
