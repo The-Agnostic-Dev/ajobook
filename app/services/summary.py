@@ -39,7 +39,7 @@ def _build(db: Session, group: Group) -> GroupSummary:
         collected = db.scalar(
             select(func.coalesce(func.sum(Payment.amount_kobo), 0))
             .join(Member)
-            .where(Member.group_id == group.id, Payment.cycle == cycle.number)
+            .where(Member.group_id == group.id)
         )
     return GroupSummary(
         group_id=group.id,
