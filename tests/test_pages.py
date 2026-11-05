@@ -1,6 +1,8 @@
 import re
 from html.parser import HTMLParser
 
+from app.services import summary
+
 
 def test_pages_need_login(client):
     response = client.get("/groups/1", follow_redirects=False)
@@ -175,6 +177,40 @@ def test_remove_member_button_removes_member(logged_in):
 
     search = logged_in.get("/members", params={"q": "Bola"}).text
     assert "Bola Testcase" not in search
+
+
+def _summary_card(page: str, group_id: int) -> str:
+    marker = f'data-group-id="{group_id}"'
+    start = page.find(marker)
+    assert start != -1, f"dashboard should have a summary card for group {group_id}"
+    end = page.find("data-group-id=", start + len(marker))
+    return page[start:] if end == -1 else page[start:end]
+
+
+def test_remove_member_updates_dashboard_summary(logged_in):
+    summary.clear()
+    response = logged_in.post(
+        "/groups/1/members",
+        data={"full_name": "Bola Summary", "phone": "08031234598", "trade": "Tailoring"},
+        follow_redirects=False,
+    )
+    assert response.status_code in (200, 303)
+
+    group_page = logged_in.get("/groups/1").text
+    match = re.search(r'href="/members/(\d+)"[^>]*>\s*Bola Summary', group_page)
+    assert match, "new member should appear on the group page"
+    member_id = match.group(1)
+
+    card = _summary_card(logged_in.get("/").text, 1)
+    assert '<dd class="members">11</dd>' in card
+    assert "₦220,000.00" in card
+
+    response = logged_in.post(f"/members/{member_id}/remove", follow_redirects=False)
+    assert response.status_code in (200, 303)
+
+    card = _summary_card(logged_in.get("/").text, 1)
+    assert '<dd class="members">10</dd>' in card
+    assert "₦200,000.00" in card
 
 
 def test_member_search(logged_in):
