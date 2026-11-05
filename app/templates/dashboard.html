@@ -13,7 +13,7 @@
       {% if card.cycle_number %}
       <dt>This month</dt><dd>Month {{ card.cycle_number }} of {{ card.cycle_total }}</dd>
       <dt>Collecting this month</dt><dd class="collector">{{ card.collector or "Not assigned" }}</dd>
-      <dt>Collected so far</dt><dd class="collected">{{ card.collected_kobo|naira }}</dd>
+      <dt>Collected to date</dt><dd class="collected">{{ card.collected_kobo|naira }}</dd>
       {% else %}
       <dt>Status</dt><dd>{{ card.status }}</dd>
       {% endif %}
