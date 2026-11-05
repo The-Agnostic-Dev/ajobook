@@ -168,6 +168,9 @@ def test_remove_member_button_removes_member(logged_in):
 
     group_page = logged_in.get("/groups/1").text
     assert f'href="/members/{member_id}"' not in group_page
+    assert "Bola Testcase removed from the group." in group_page
+
+    group_page = logged_in.get("/groups/1").text
     assert "Bola Testcase" not in group_page
 
     search = logged_in.get("/members", params={"q": "Bola"}).text
