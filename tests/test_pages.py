@@ -1,6 +1,8 @@
 import re
+from datetime import timedelta
 from html.parser import HTMLParser
 
+from app.dates import lagos_today
 from app.services import summary
 
 
@@ -225,3 +227,58 @@ def test_resending_the_same_form_records_once(logged_in):
     assert "recorded for" in first.text
     assert "already recorded" in second.text
     assert second.text.count("Sent twice") == 1
+
+
+def test_remove_payment_on_statement_confirms_and_deletes(logged_in):
+    search = logged_in.get('/members', params={'q': 'Adunni'}).text
+    match = re.search(r'href="(/members/\d+)"[^>]*>\s*Adunni Bakare', search)
+    assert match, "member search should link to Adunni's statement"
+    member_url = match.group(1)
+    member_id = member_url.rsplit('/', 1)[-1]
+
+    note = 'Pytest removal payment'
+    paid_on = (lagos_today() - timedelta(days=1)).isoformat()
+    response = logged_in.post(
+        f'/members/{member_id}/payments',
+        data={'cycle': '1', 'amount': '123.45', 'paid_on': paid_on, 'note': note},
+    )
+    assert response.status_code == 200
+    assert note in response.text
+
+    statement = logged_in.get(member_url)
+    assert statement.status_code == 200
+
+    class PaymentFormParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.forms = []
+            self.form = None
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            if tag == 'form' and re.match(r'/payments/\d+/delete$', attrs.get('action', '')):
+                self.form = {
+                    'action': attrs['action'],
+                    'data_confirm': attrs.get('data-confirm'),
+                    'button_type': None,
+                }
+            elif self.form is not None and tag == 'button':
+                self.form['button_type'] = attrs.get('type', 'submit')
+
+        def handle_endtag(self, tag):
+            if tag == 'form' and self.form is not None:
+                self.forms.append(self.form)
+                self.form = None
+
+    parser = PaymentFormParser()
+    parser.feed(statement.text)
+    payments = [f for f in parser.forms if f['data_confirm'] == 'Remove this payment of ₦123.45?']
+    assert len(payments) == 1, 'statement should show one remove form for the new payment'
+    payment = payments[0]
+    assert payment['button_type'] == 'submit', 'Remove payment button must submit the form'
+
+    response = logged_in.post(payment['action'], follow_redirects=False)
+    assert response.status_code in (200, 303)
+
+    statement = logged_in.get(member_url).text
+    assert note not in statement
