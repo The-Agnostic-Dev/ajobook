@@ -88,6 +88,24 @@ def test_on_time_payment_recorded_later_has_no_late_fee(db, make_group):
     assert p.late_fee_kobo == 0
 
 
+def test_payment_within_grace_recorded_a_week_later_has_no_late_fee(db, make_group):
+    group = make_group(start=date(2026, 1, 1), due_day=5, grace_days=3, late_fee_kobo=100_000)
+    member = group.members[0]
+    p = payments.record_payment(
+        db, member, cycle=1, amount_kobo=1_000_000, paid_on=date(2026, 1, 6), recorded_at=_at(date(2026, 1, 12))
+    )
+    assert p.late_fee_kobo == 0
+
+
+def test_late_payment_recorded_later_charged_late_fee_once(db, make_group):
+    group = make_group(start=date(2026, 1, 1), due_day=5, grace_days=3, late_fee_kobo=100_000)
+    member = group.members[0]
+    p = payments.record_payment(
+        db, member, cycle=1, amount_kobo=1_000_000, paid_on=date(2026, 1, 9), recorded_at=_at(date(2026, 1, 20))
+    )
+    assert p.late_fee_kobo == 100_000
+
+
 def test_payout_day_ignores_stored_late_fee_for_on_time_payment(db, make_group):
     group = make_group(members=2, start=date(2026, 1, 1), contribution_kobo=1_000_000, late_fee_kobo=50_000)
     a, b = group.members
